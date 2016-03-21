@@ -12,7 +12,7 @@
   <title>NodeMC</title>
   <!-- Bootstrap core CSS -->
   <link href="https://maxcdn.bootstrapcdn.com/bootswatch/3.3.5/darkly/bootstrap.min.css" rel="stylesheet">
-
+  <link rel="stylesheet" href="css/style.css">
   <body>
     <nav class="navbar navbar-default navbar-static-top">
       <a class="navbar-brand" href="#">NodeMC</a>
@@ -36,19 +36,27 @@
 
     <div class="pull-left col-xs-offset-1"  style="position:relative;">
       <div class="row">
-        Server power control<br><hr>
-        <button type="button" class="btn btn-danger" id="restart" style="width:100px;">Restart <span class="glyphicon glyphicon-refresh" aria-hidden="true"></span></button>
-        <button type="button" class="btn btn-danger" id="stop" style="width:100px;">Stop <span class="glyphicon glyphicon-off" aria-hidden="true"></span></button>
-        <button type="button" class="btn btn-success" id="start" style="width:100px;">Start <span class="glyphicon glyphicon-flash" aria-hidden="true"></span></button>
-      </div>
-    </div>
+		<div class="col-sm-4">
+			Server power control<br><hr>
+			<button type="button" class="btn btn-danger" id="restart" style="width:100px;">Restart <span class="glyphicon glyphicon-refresh" aria-hidden="true"></span></button>
+			<button type="button" class="btn btn-danger" id="stop" style="width:100px;">Stop <span class="glyphicon glyphicon-off" aria-hidden="true"></span></button>
+			<button type="button" class="btn btn-success" id="start" style="width:100px;">Start <span class="glyphicon glyphicon-flash" aria-hidden="true"></span></button>
+        </div>
+		<div class="col-sm-4">
+			FTL Control<br><hr>
+		</div>
+	  <div class="row">
+		<br>
+	  </div>
+	  </div>
+	  </br>
 
-    <div class="container col-sm-offset-3">
+    <div class="container col-sm-offset">
       <div class="row">
         <textarea name="name" rows="32" id="log" class="form-control"></textarea>
       </div>
     </div>
-    <div class="container col-sm-offset-3">
+    <div class="container col-sm-offset">
       <div class="row">
         <form action="/command" method="post" enctype="text/plain">
           <fieldset class="form-group">
