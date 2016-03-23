@@ -19,7 +19,7 @@ function getlogs() {
             });
     });
 }
-setInterval(getlogs, 500);
+setInterval(getlogs, 1000);
 
 $(document).ready(function() {
     var $form = $('form');

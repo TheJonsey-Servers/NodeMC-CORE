@@ -13,6 +13,16 @@ $("#start").click(function() {
   $("#stop").show();
   $("#start").hide();
 });
+function gettext() {
+        var ban = "tempban " + document.getElementsByName('usr')[0].value + " " + document.getElementsByName('rsn')[0].value;
+        $("#ban").click(function() {
+         $.post('/command', {
+         Body: ban,
+         apikey: key
+         },
+         function(res){});
+        });
+};
 
 // Hide start on page load
 $(document).ready(function() {
