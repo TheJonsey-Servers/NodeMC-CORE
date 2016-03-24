@@ -18,7 +18,7 @@
  *     - Other info on index.html
  */
 
-// Requires
+// Requires (minus Socket.IO)
 var spawn = require('child_process').spawn;
 var express = require('express');
 var app = require('express')();
@@ -110,6 +110,10 @@ app.use('/', express.static(sf_web));
 app.use(require('body-parser').urlencoded({
     extended: false
 }));
+
+server = app.listen(PORT); // Listen on port defined in properties.json
+
+var io = require('socket.io')(server)
 
 // ---
 
@@ -246,6 +250,10 @@ if (serverOptions != null && !serverOptions.firstrun) {
     }
     // ---
 } else {}
+
+// Socket.IO handlers
+
+// ...will go here
 
 // App post/get request handlers (API)
 
@@ -489,8 +497,6 @@ app.delete('/deletefile', function(request, response) {
         response.send("false");
     }
 });
-
-app.listen(PORT); // Listen on port defined in properties.json
 
 process.on('exit', function(code) { // When it exits kill the server process too
     serverSpawnProcess.kill(2);
