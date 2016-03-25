@@ -233,6 +233,7 @@ function log(data) { // Log (dump) server output to variable
     //  Technically uneeded, useful for debugging
     //process.stdout.write(data.toString());
     completelog = completelog + data.toString();
+	iolog(data);
 }
 // ---
 
@@ -253,7 +254,51 @@ if (serverOptions != null && !serverOptions.firstrun) {
 
 // Socket.IO handlers
 
-// ...will go here
+io.on('connection', function (socket) {
+	socket["nmc_isauthed"] = false;
+	
+	socket.on("auth", function (data) {
+		if (data["action"] == "deauth") {
+			socket["nmc_isauthed"] = false;
+			socket.emit("authstatus", "deauth success");
+			socket.leave("authed");
+		} else if (data["action"] == "auth") {
+			socket["nmc_isauthed"] = data["apikey"] == apikey;
+			if (socket["nmc_isauthed"] == true) {
+				socket.emit("authstatus", "auth success");
+				socket.join("authed");
+			} else {
+				socket.emit("authstatus", "auth failed");
+				socket.leave("authed");
+			}
+		} else if (data["action"] == authstatus) {
+			if (socket["nmc_isauthed"] == true) {
+				socket.emit("authstatus", "authed");
+			} else {
+				socket.emit("authstatus", "not authed");
+			}
+		}
+	});
+	
+	socket.on('status', function () {
+		if (serverStopped == true) {
+			socket.emit("status", "offline");
+		} else {
+			socket.emit("status", "online");
+		});
+	}
+	
+	socket.on("fulllog", function () {
+		if (socket["nmc_isauthed"] == true) {
+			socket.emit("fulllog", completelog);
+		}
+	})
+);
+
+function iolog(data) {
+	io.to("authed").emit("appendlog", data.toString());
+}
+	
 
 // App post/get request handlers (API)
 
