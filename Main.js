@@ -285,15 +285,15 @@ io.on('connection', function (socket) {
 			socket.emit("status", "offline");
 		} else {
 			socket.emit("status", "online");
-		});
-	}
+		}
+	});
 	
 	socket.on("fulllog", function () {
 		if (socket["nmc_isauthed"] == true) {
 			socket.emit("fulllog", completelog);
 		}
-	})
-);
+	});
+});
 
 function iolog(data) {
 	io.to("authed").emit("appendlog", data.toString());
