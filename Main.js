@@ -270,7 +270,7 @@ io.on('connection', function (socket) {
 				socket.emit("authstatus", "auth failed");
 				socket.leave("authed");
 			}
-		} else if (data["action"] == authstatus) {
+		} else if (data["action"] == "authstatus") {
 			if (socket["nmc_isauthed"] == true) {
 				socket.emit("authstatus", "authed");
 			} else {
