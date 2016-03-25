@@ -45,8 +45,6 @@ var usingfallback = false;
 var completelog = "";
 try { // If no error, server has been run before
     var serverOptions = JSON.parse(fs.readFileSync('server_files/properties.json', 'utf8'));
-    var srvprp = pr('server.properties'); // Get the original properties
-    var oldport = srvprp.get('server-port');
 
     if (serverOptions.firstrun) {
         console.log("Naviagte to http://localhost:" + serverOptions.port + " to set up NodeMC.");
@@ -57,7 +55,6 @@ try { // If no error, server has been run before
     //console.log(sf_web);
 } catch (e) { // If there is an error, copy server files!
     console.log(e);
-    var serverOptions = srvprp = null;
     console.log("Essential files not found! Please read the guide on Getting Started :)");
     console.log("Exiting...");
     process.exit(1);
@@ -180,6 +177,8 @@ function setport() { // Enforcing server properties set by host
     //console.log(oldport);
     //console.log(mcport);
     try {
+		var srvprp = pr('server.properties'); // Get the original properties
+		var oldport = srvprp.get('server-port');
         // Here we set any minecraft server properties we need
         fs.readFile('server.properties', 'utf8', function(err, data) {
             if (err) {
@@ -233,6 +232,7 @@ function log(data) { // Log (dump) server output to variable
     //  Technically uneeded, useful for debugging
     //process.stdout.write(data.toString());
     completelog = completelog + data.toString();
+	iolog(data);
 }
 // ---
 
@@ -253,7 +253,51 @@ if (serverOptions != null && !serverOptions.firstrun) {
 
 // Socket.IO handlers
 
-// ...will go here
+io.on('connection', function (socket) {
+	socket["nmc_isauthed"] = false;
+	
+	socket.on("auth", function (data) {
+		if (data["action"] == "deauth") {
+			socket["nmc_isauthed"] = false;
+			socket.emit("authstatus", "deauth success");
+			socket.leave("authed");
+		} else if (data["action"] == "auth") {
+			socket["nmc_isauthed"] = data["apikey"] == apikey;
+			if (socket["nmc_isauthed"] == true) {
+				socket.emit("authstatus", "auth success");
+				socket.join("authed");
+			} else {
+				socket.emit("authstatus", "auth failed");
+				socket.leave("authed");
+			}
+		} else if (data["action"] == "authstatus") {
+			if (socket["nmc_isauthed"] == true) {
+				socket.emit("authstatus", "authed");
+			} else {
+				socket.emit("authstatus", "not authed");
+			}
+		}
+	});
+	
+	socket.on('status', function () {
+		if (serverStopped == true) {
+			socket.emit("status", "offline");
+		} else {
+			socket.emit("status", "online");
+		}
+	});
+	
+	socket.on("fulllog", function () {
+		if (socket["nmc_isauthed"] == true) {
+			socket.emit("fulllog", completelog);
+		}
+	});
+});
+
+function iolog(data) {
+	io.to("authed").emit("appendlog", data.toString());
+}
+	
 
 // App post/get request handlers (API)
 
