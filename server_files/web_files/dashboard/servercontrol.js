@@ -22,9 +22,9 @@ function gettext() {
          },
          function(res){});
         });
-};
+}
 
 // Hide start on page load
 $(document).ready(function() {
   $("#start").hide();
-})
+});
