@@ -2,32 +2,35 @@
  * Functions to get, set, and manipulte cookie
  * containing API key for requests.
  */
-function checkAPIKey() {
-    var username = getCookie("apikey");
-    if (username != "") {
-        return apikey = username;
+
+var successful = false;
+var tokenCookie;
+
+function checkAPIToken() {
+    tokenCookie = getCookie("apitoken");
+    if (tokenCookie !== null && tokenCookie !== "") {
+        return tokenCookie;
     } else {
-        username = prompt("Please enter your API key:", "");
-        if (username != "" && username != null) {
-            $.post("/verifykey", {
-                apikey: username
-            }, function(data) {
-                if (data == true) {
-                    setCookie("apikey", username, 365);
-                }
-                else{}
-            }, "json");
-        }
+        passcode = prompt("Please enter your passcode.");
+        $.post("/verifyk", {token: passcode}, function(data) {
+            if (data !== false) {
+                setCookie("apitoken", data, 365);
+                return data;
+            } else {
+                alert("Incorrect passcode.");
+                return null;
+            }
+        }, "json");
     }
 }
 
 function getApiKey() { // TO BE REMOVED
     console.warn("getApiKey is deprecated! Use getAuthKey()!");
-    return getCookie("apikey");
+    return checkAPIToken();
 }
 
 function getAuthKey() {
-    return getCookie("apikey");
+    return checkAPIToken();
 }
 
 function getCookie(cname) {
@@ -48,4 +51,4 @@ function setCookie(cname, cvalue, exdays) {
     document.cookie = cname + "=" + cvalue + "; " + expires;
 }
 
-checkAPIKey();
+checkAPIToken();

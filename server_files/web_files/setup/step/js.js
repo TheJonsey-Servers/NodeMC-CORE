@@ -5,6 +5,13 @@ function getApiKey() {
     });
 }
 
+function getTOTPSecret() {
+    $.get("/fr_totpsecret", function(data){
+       $("#totp").val(data); 
+       localStorage.setItem("totpsecret", data);
+    });
+}
+
 function serverports() {
     var nmc_port = $("#nodemc_port").val();
     var mn_port = $("#minecraft_port").val();
@@ -38,6 +45,7 @@ function set_jarfile() {
 function showinfo() {
     // Key
     document.getElementById("apikey").innerHTML = "API Key: " + localStorage.getItem("apikey");
+    document.getElementById("totpsecret").innerHTML = "TOTP Secret: " + localStorage.getItem("totpsecret");
     document.getElementById("nmc_port").innerHTML = "NodeMC Port: " + localStorage.getItem("nodemc_port");
     document.getElementById("mc_port").innerHTML = "Minecraft Port: " + localStorage.getItem("minecraft_port");
     document.getElementById("memory").innerHTML = "RAM (In MB): " + localStorage.getItem("memory");

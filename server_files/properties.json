@@ -1,5 +1,6 @@
 {
   "apikey": "",
+  "totpsecret": "",
   "port": 3000,
   "minecraft_port": 25565,
   "ram": "",

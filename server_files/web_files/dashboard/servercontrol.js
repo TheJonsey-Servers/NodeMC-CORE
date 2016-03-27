@@ -1,15 +1,15 @@
 var key = getApiKey();
 
 $("#restart").click(function() {
-  $.post('/restartserver', {apikey: key}, function() {});
+  $.post('/restartserver', {authkey: key}, function() {});
 });
 $("#stop").click(function() {
-  $.post('/stopserver', {apikey: key}, function() {});
+  $.post('/stopserver', {authkey: key}, function() {});
   $("#start").show();
   $("#stop").hide();
 });
 $("#start").click(function() {
-  $.post('/startserver', {apikey: key}, function() {});
+  $.post('/startserver', {authkey: key}, function() {});
   $("#stop").show();
   $("#start").hide();
 });
