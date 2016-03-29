@@ -1,6 +1,10 @@
 var filename = window.location.hash.substr(1);
-var key = getApiKey();
+var key;
 var editor;
+
+getAuthKey(function(authkey) {
+    key = authkey;
+});
 
 function file() {
     $(function() {

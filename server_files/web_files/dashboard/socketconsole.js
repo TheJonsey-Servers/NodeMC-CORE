@@ -1,9 +1,12 @@
 var socket = io();
 var authed = false;
 var textarea = document.getElementById("log");
-var key = getApiKey();
+var key;
 
-socket.emit("auth", {action: "auth", apikey: key});
+getAuthKey(function(authkey) {
+    key = authkey;
+    socket.emit("auth", {action: "auth", apikey: key});
+});
 
 socket.on("authstatus", function (status) {
     if (status == "auth success" || status == "authed") {
@@ -28,18 +31,52 @@ socket.on("appendlog", function (append) {
 
 // Not Socket.IOified yet - left in for completeness
 
+function runCommand(command) {
+    console.log(command);
+    $.post($(this).attr('action'), {
+        command: command,
+        key: key
+    }, function(response) {}, 'json');
+}
+
 $(document).ready(function() {
     var $form = $('form');
     $form.submit(function() {
         var command = $("#command").val();
-        console.log(command);
-        $.post($(this).attr('action'), {
-            Body: command,
-            apikey: key
-        }, function(response) {}, 'json');
+        runCommand(command);
         $('#command').val('');
         return false;
     });
+});
+
+$("#restart").click(function() {
+  $.post('/restartserver', {authkey: key}, function() {});
+});
+$("#stop").click(function() {
+  $.post('/stopserver', {authkey: key}, function() {});
+  $("#start").show();
+  $("#stop").hide();
+});
+$("#start").click(function() {
+  $.post('/startserver', {authkey: key}, function() {});
+  $("#stop").show();
+  $("#start").hide();
+});
+
+function gettext() {
+        var ban = "tempban " + document.getElementsByName('usr')[0].value + " " + document.getElementsByName('rsn')[0].value;
+        $("#ban").click(function() {
+         $.post('/command', {
+         Body: ban,
+         apikey: key
+         },
+         function(res){});
+        });
+}
+
+// Hide start on page load
+$(document).ready(function() {
+  $("#start").hide();
 });
 
 function scrollToBottom() {

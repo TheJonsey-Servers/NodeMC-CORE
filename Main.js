@@ -78,9 +78,10 @@ try {
     } else {
         var apikey = serverOptions['apikey'];
     }
-    if (serverOptions.totpsecret === "" || serverOptions.totpsecret === null) {
+    var totpsecret = serverOptions.totpsecret;
+    if (totpsecret === "" || totpsecret === null) {
         console.log("Generating a new TOTP secret...");
-        var totpsecret = serverOptions.totpsecret = speakeasy.generateSecret().base32;
+        totpsecret = serverOptions.totpsecret = speakeasy.generateSecret().base32;
         var newOptions = JSON.stringify(serverOptions, null, 2);
 
         fs.writeFile("server_files/properties.json", newOptions, function(err) {
@@ -91,8 +92,6 @@ try {
             }
         });
         
-    } else {
-        var totpsecret = serverOptions["totpsecret"];
     }
     var name = serverOptions['name'];
     //directory = "/home/gabriel/"+name;
@@ -173,7 +172,8 @@ function checkAPIKey(key, notnull) {
 }
 
 function checkTOTPPasscode(passcode) {
-    return speakeasy.totp.verify({secret: totpsecret, encoding: 'base32', token: totptoken});
+    console.log("Verifying " + passcode + " against " + speakeasy.totp({secret: totpsecret, encoding: "base32"}));
+    return speakeasy.totp.verify({secret: totpsecret, encoding: 'base32', token: passcode});
 }
 
 function checkTOTPToken(totptoken, notnull) {
@@ -374,6 +374,7 @@ app.get('/download/:file', function(request, response) {
     }
 });
 
+// FIRST RUN SETUP URLS
 
 // First run setup POST
 app.post('/fr_setup', function(request, response) {
@@ -423,7 +424,7 @@ app.post('/fr_setup', function(request, response) {
     }
 });
 
-app.get('/fr_apikey', function(request, response) {
+app.get('/fr_apikey', function(request, response) { // Get API key during setup
     if (serverOptions.firstrun) {
         response.send(serverOptions.apikey);
     } else { // Very strict I know :|
@@ -431,7 +432,7 @@ app.get('/fr_apikey', function(request, response) {
     }
 });
 
-app.get('/fr_totpsecret', function(request, response) {
+app.get('/fr_totpsecret', function(request, response) { // Get TOTP secret during setup
     if (serverOptions.firstrun) {
         response.send(serverOptions.totpsecret);
     } else { // Very strict I know :|
@@ -439,14 +440,19 @@ app.get('/fr_totpsecret', function(request, response) {
     }
 });
 
+// AUTHENTICATION KEY VALIDATION URLS
+
 app.post('/verifykey', function(request, response) {
-    var verify = request.param('key');
+    var verify = request.body.key;
+    console.log("Somebody tried to authenticate with " + verify);
     if (checkAPIKey(verify, "notnull") == true) {
         response.send('true');
-    } else if (checkTOTPPasscode(verify, "notnull") === true) {
+        console.log("Verified with API key.");
+    } else if (checkTOTPPasscode(parseInt(verify), "notnull") === true) {
         var cookietoken = crypto.randomBytes(32).toString('hex');
         response.send(cookietoken);
         tokens.push(cookietoken);
+        console.log("Verified with TOTP code: " + verify + "; generated token was " + cookietoken);
     } else {
         response.send('false');
     }
@@ -468,13 +474,15 @@ app.post('/verifypasscode', function(request, response) {
         response.send(cookietoken);
         tokens.push(cookietoken);
     } else {
-        response.send('invalid');
+        response.send('false');
     }
 });
 
+// MINECRAFT SERVER CONTROL URLS
+
 app.post('/command', function(request, response) { // Send command to server
-    if (checkAuthKey(request.param('apikey')) == true) {
-        var command = request.param('Body');
+    if (checkAuthKey(request.body.key) === true) {
+        var command = request.body.command;
         if (command == "stop") {
             serverStopped = true;
         }
@@ -495,7 +503,7 @@ app.post('/command', function(request, response) { // Send command to server
     }
 });
 
-app.get('/serverup', function(reqiest, response) {
+app.get('/serverup', function(reqiest, response) { // Check whether server is online or not
     if (serverStopped == true) {
         response.send("no");
     } else {
@@ -503,11 +511,11 @@ app.get('/serverup', function(reqiest, response) {
     }
 });
 
-app.get('/log', function(request, response) { // Get server log
+app.get('/log', function(request, response) { // Get full server log
     response.send(completelog);
 });
 
-app.get('/files', function(request, response) { // Get server file
+app.get('/files', function(request, response) { // Get files on server
     fs.readdir(dir + '/', function(err, items) {
         files = items;
         response.send(JSON.stringify({
@@ -574,7 +582,7 @@ app.get('/info', function(request, response) { // Return server info as JSON obj
 });
 
 app.post('/restartserver', function(request, response) { // Restart server
-    if (checkAuthKey(request.param('apikey')) == true) {
+    if (checkAuthKey(request.body.key) == true) {
         restartserver();
     } else {
         response.send("Invalid API key");
@@ -582,7 +590,7 @@ app.post('/restartserver', function(request, response) { // Restart server
 });
 
 app.post('/startserver', function(request, response) { // Start server
-    if (checkAuthKey(request.param('apikey')) == true) {
+    if (checkAuthKey(request.body.key) == true) {
         if (serverStopped == true) {
             setport();
             startServer();
@@ -593,7 +601,7 @@ app.post('/startserver', function(request, response) { // Start server
 });
 
 app.post('/stopserver', function(request, response) { // Stop server
-    if (checkAuthKey(request.param('apikey')) == true) {
+    if (checkAuthKey(request.body.key) == true) {
         if (serverStopped == false) {
             serverSpawnProcess.stdin.write('stop\n');
             serverStopped = true;

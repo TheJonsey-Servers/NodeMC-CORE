@@ -1,4 +1,8 @@
-var key = getApiKey();
+var key;
+
+getAuthKey(function(authkey) {
+    key = authkey;
+});
 
 $("#restart").click(function() {
   $.post('/restartserver', {authkey: key}, function() {});

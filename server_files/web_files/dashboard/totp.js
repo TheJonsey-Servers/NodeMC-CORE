@@ -3,34 +3,34 @@
  * containing API key for requests.
  */
 
-var successful = false;
 var tokenCookie;
 
-function checkAPIToken() {
+function checkAPIToken(callback) {
     tokenCookie = getCookie("apitoken");
     if (tokenCookie !== null && tokenCookie !== "") {
-        return tokenCookie;
+        callback(tokenCookie);
     } else {
         passcode = prompt("Please enter your passcode.");
-        $.post("/verifyk", {token: passcode}, function(data) {
+        $.post("/verifykey", {key: passcode}, function(data) {
+            console.log(data); // TESTINGNITSET
             if (data !== false) {
                 setCookie("apitoken", data, 365);
-                return data;
+                callback(data);
             } else {
                 alert("Incorrect passcode.");
-                return null;
+                callback(null);
             }
         }, "json");
     }
 }
 
 function getApiKey() { // TO BE REMOVED
-    console.warn("getApiKey is deprecated! Use getAuthKey()!");
-    return checkAPIToken();
+    console.error("getApiKey is deprecated! Use getAuthKey()!");
+    return null;
 }
 
-function getAuthKey() {
-    return checkAPIToken();
+function getAuthKey(callback) {
+    checkAPIToken(callback);
 }
 
 function getCookie(cname) {
@@ -50,5 +50,3 @@ function setCookie(cname, cvalue, exdays) {
     var expires = "expires=" + d.toUTCString();
     document.cookie = cname + "=" + cvalue + "; " + expires;
 }
-
-checkAPIToken();
