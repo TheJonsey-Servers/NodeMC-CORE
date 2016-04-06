@@ -43,11 +43,8 @@ var dir = ".";
 var files = "";
 var usingfallback = false;
 var completelog = "";
-<<<<<<< HEAD
 var tokens = [];
-=======
 var srvprp;
->>>>>>> refs/remotes/origin/master
 try { // If no error, server has been run before
     var serverOptions = JSON.parse(fs.readFileSync('server_files/properties.json', 'utf8'));
 
