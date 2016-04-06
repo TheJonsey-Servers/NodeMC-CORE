@@ -171,6 +171,18 @@ function checkAPIKey(key, notnull) {
     }
 }
 
+function checkTOTPPasscode(passcode) {
+    console.log("Verifying " + passcode + " against " + speakeasy.totp({secret: totpsecret, encoding: "base32"}));
+    return speakeasy.totp.verify({secret: totpsecret, encoding: 'base32', token: passcode});
+}
+
+function checkTOTPToken(totptoken, notnull) {
+    if (notnull === null) {
+        console.log("Calling checkTOTPKey directly is deprecated. Use checkAuthKey(key)!");
+    }
+    return tokens.indexOf(totptoken) !== null;
+}
+
 function getServerProps(force) {
     if (!force || (typeof srvprp !== "undefined" && srvprp !== null)) {
         return srvprp;
@@ -183,18 +195,6 @@ function getServerProps(force) {
         }
         return srvprp;
     }
-}
-
-function checkTOTPPasscode(passcode) {
-    console.log("Verifying " + passcode + " against " + speakeasy.totp({secret: totpsecret, encoding: "base32"}));
-    return speakeasy.totp.verify({secret: totpsecret, encoding: 'base32', token: passcode});
-}
-
-function checkTOTPToken(totptoken, notnull) {
-    if (notnull === null) {
-        console.log("Calling checkTOTPKey directly is deprecated. Use checkAuthKey(key)!");
-    }
-    return tokens.indexOf(totptoken) !== null;
 }
 
 function checkVersion() { // Check for updates
@@ -315,14 +315,17 @@ io.on('connection', function (socket) {
 			socket.nmc_isauthed = false;
 			socket.emit("authstatus", "deauth success");
 			socket.leave("authed");
+            console.log("Deauthenticated a client.");
 		} else if (data.action == "auth") { // Authenticate using an API key or an already-generated token
-			socket.nmc_isauthed = data.apikey == apikey || tokens.indexOf(data.apikey) != -1;
+			socket.nmc_isauthed = checkAuthKey(data.key);
 			if (socket.nmc_isauthed === true) {
 				socket.emit("authstatus", "auth success");
 				socket.join("authed");
+                console.log("Authenticated a client with auth key " + data.key + " successfully.");
 			} else {
 				socket.emit("authstatus", "auth failed");
 				socket.leave("authed");
+                console.log("Client failed to authenticate with auth key " + data.key + ".");
 			}
 		} else if (data.action == "authstatus") { // Check authentication status
 			if (socket.nmc_isauthed === true) {
@@ -330,16 +333,7 @@ io.on('connection', function (socket) {
 			} else {
 				socket.emit("authstatus", "not authed");
 			}
-		} else if (data.action == "tokenauth") { // DEPRECATED - Authenticate with an already-generated token
-            socket.nmc_isauthed = checkTOTPToken(data.totptoken);
-			if (socket.nmc_isauthed === true) {
-				socket.emit("authstatus", "auth success");
-				socket.join("authed");
-			} else {
-				socket.emit("authstatus", "auth failed");
-				socket.leave("authed");
-			}
-        }
+		}
 	});
 	
 	socket.on('status', function () {
@@ -477,7 +471,7 @@ app.post('/verifykey', function(request, response) {
 });
 
 app.post('/verifyapikey', function(request, response) {
-    var verify = request.param('apikey');
+    var verify = request.body.apikey;
     if (checkAPIKey(verify, "notnull") === true) {
         response.send('true');
     } else {
@@ -486,7 +480,7 @@ app.post('/verifyapikey', function(request, response) {
 });
 
 app.post('/verifypasscode', function(request, response) {
-    var verify = request.param('token');
+    var verify = request.body.key;
     if (checkTOTPPasscode(verify, "notnull") === true) {
         var cookietoken = crypto.randomBytes(32).toString('hex');
         response.send(cookietoken);

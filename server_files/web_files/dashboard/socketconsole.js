@@ -5,7 +5,7 @@ var key;
 
 getAuthKey(function(authkey) {
     key = authkey;
-    socket.emit("auth", {action: "auth", apikey: key});
+    socket.emit("auth", {action: "auth", key: key});
 });
 
 socket.on("authstatus", function (status) {
