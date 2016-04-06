@@ -156,7 +156,6 @@ app.use(morgan('common', {
 
 // App functions for various things
 
-<<<<<<< HEAD
 function checkAuthKey(key) {
     return checkAPIKey(key, "ThisIsNotNull") || checkTOTPToken(key, "ThisIsAlsoNotNull");
 }
@@ -165,7 +164,13 @@ function checkAPIKey(key, notnull) {
     if (notnull === null) {
         console.log("Calling checkAPIKey directly is deprecated. Use checkAuthKey(key)!");
     }
-=======
+    if (key == apikey) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
 function getServerProps(force) {
     if (!force || (typeof srvprp !== "undefined" && srvprp !== null)) {
         return srvprp;
@@ -177,15 +182,6 @@ function getServerProps(force) {
             srvprp = null;
         }
         return srvprp;
-    }
-}
-
-function checkAPIKey(key) {
->>>>>>> refs/remotes/origin/master
-    if (key == apikey) {
-        return true;
-    } else {
-        return false;
     }
 }
 
