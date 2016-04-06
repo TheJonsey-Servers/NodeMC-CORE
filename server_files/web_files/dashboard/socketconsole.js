@@ -50,15 +50,15 @@ $(document).ready(function() {
 });
 
 $("#restart").click(function() {
-  $.post('/restartserver', {authkey: key}, function() {});
+  $.post('/restartserver', {key: key}, function() {});
 });
 $("#stop").click(function() {
-  $.post('/stopserver', {authkey: key}, function() {});
+  $.post('/stopserver', {key: key}, function() {});
   $("#start").show();
   $("#stop").hide();
 });
 $("#start").click(function() {
-  $.post('/startserver', {authkey: key}, function() {});
+  $.post('/startserver', {key: key}, function() {});
   $("#stop").show();
   $("#start").hide();
 });
