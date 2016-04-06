@@ -18,13 +18,13 @@ socket.on("authstatus", function (status) {
 });
 
 socket.on("fulllog", function (fulllog) {
-    $("#log").val(fulllog);
+    $("#log").val(fulllog.split("\n").slice(-500).join("\n"));
     $("#log").change();
     scrollToBottom();
 });
 
 socket.on("appendlog", function (append) {
-    textarea.value = textarea.value + append;
+    $("#log").val($("#log").val().split("\n").slice(-200).join("\n") + append);
     $("#log").change();
     scrollToBottom();
 });
