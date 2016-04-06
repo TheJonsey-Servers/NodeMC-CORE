@@ -24,7 +24,7 @@ socket.on("fulllog", function (fulllog) {
 });
 
 socket.on("appendlog", function (append) {
-    $("#log").val($("#log").val().split("\n").slice(-200).join("\n") + append);
+    $("#log").val($("#log").val().split("\n").slice(-500).join("\n") + append);
     $("#log").change();
     scrollToBottom();
 });
