@@ -40,11 +40,14 @@ var speakeasy = require("speakeasy");
 // Set variables for the server(s)
 var current = 145;
 var dir = ".";
-var properties = [];
 var files = "";
 var usingfallback = false;
 var completelog = "";
+<<<<<<< HEAD
 var tokens = [];
+=======
+var srvprp;
+>>>>>>> refs/remotes/origin/master
 try { // If no error, server has been run before
     var serverOptions = JSON.parse(fs.readFileSync('server_files/properties.json', 'utf8'));
 
@@ -156,6 +159,7 @@ app.use(morgan('common', {
 
 // App functions for various things
 
+<<<<<<< HEAD
 function checkAuthKey(key) {
     return checkAPIKey(key, "ThisIsNotNull") || checkTOTPToken(key, "ThisIsAlsoNotNull");
 }
@@ -164,6 +168,23 @@ function checkAPIKey(key, notnull) {
     if (notnull === null) {
         console.log("Calling checkAPIKey directly is deprecated. Use checkAuthKey(key)!");
     }
+=======
+function getServerProps(force) {
+    if (!force || (typeof srvprp !== "undefined" && srvprp !== null)) {
+        return srvprp;
+    } else {
+        try {
+            srvprp = pr("server.properties");
+        } catch (e) {
+            console.log(e);
+            srvprp = null;
+        }
+        return srvprp;
+    }
+}
+
+function checkAPIKey(key) {
+>>>>>>> refs/remotes/origin/master
     if (key == apikey) {
         return true;
     } else {
@@ -212,21 +233,25 @@ function setport() { // Enforcing server properties set by host
     //console.log(oldport);
     //console.log(mcport);
     try {
-		var srvprp = pr('server.properties'); // Get the original properties
-		var oldport = srvprp.get('server-port');
-        // Here we set any minecraft server properties we need
-        fs.readFile('server.properties', 'utf8', function(err, data) {
-            if (err) {
-                return console.log(err);
-            }
-            var result = data.replace('server-port=' + oldport, 'server-port=' + mcport);
+		var props = getServerProps(); // Get the original properties
+		if (props !== null) {
+            var oldport = props.get('server-port');
+			// Here we set any minecraft server properties we need
+			fs.readFile('server.properties', 'utf8', function(err, data) {
+				if (err) {
+					return console.log(err);
+				}
+				var result = data.replace('server-port=' + oldport, 'server-port=' + mcport);
 
-            fs.writeFile('server.properties', result, 'utf8', function(err) {
-                if (err) return console.log(err);
-            });
-        });
-        srvprp = pr('server.properties'); // Get the new properties
-        //console.log(oldport);
+				fs.writeFile('server.properties', result, 'utf8', function(err) {
+					if (err) return console.log(err);
+				});
+			});
+			props = pr('server.properties'); // Get the new properties
+            //console.log(oldport);
+        } else {
+            console.log("Failed to get the server properties!");
+        }
 
         fs.readFile('eula.txt', 'utf8', function(err, data) {
             if (err) {
@@ -571,14 +596,21 @@ app.post('/savefile', function(request, response) { // Save a POST'd file
 });
 
 app.get('/info', function(request, response) { // Return server info as JSON object
-    properties.push(srvprp.get('motd')); // message of the day
-    properties.push(srvprp.get('server-port')); // server port
-    properties.push(srvprp.get('white-list')); // if whitelist is on or off
-    properties.push(serverOptions['jar'] + ' ' + serverOptions['version']); // server jar version
-    properties.push(outsideip); // outside ip
-    properties.push(serverOptions['id']); // 
-    response.send(JSON.stringify(properties));
-    properties = []; // reset so we don't keep adding to it
+    var props = getServerProps();
+    var serverInfo = [];
+	if (props !== null) {
+		serverInfo.push(props.get('motd')); // message of the day
+		serverInfo.push(props.get('server-port')); // server port
+		serverInfo.push(props.get('white-list')); // if whitelist is on or off
+	} else {
+		serverInfo.push("Failed to get MOTD.");
+		serverInfo.push("Failed to get port.");
+		serverInfo.push(false);
+	}
+    serverInfo.push(serverOptions['jar'] + ' ' + serverOptions['version']); // server jar version
+    serverInfo.push(outsideip); // outside ip
+    serverInfo.push(serverOptions['id']); // 
+    response.send(JSON.stringify(serverInfo));
 });
 
 app.post('/restartserver', function(request, response) { // Restart server
