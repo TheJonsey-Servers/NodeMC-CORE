@@ -180,7 +180,7 @@ function checkTOTPToken(totptoken, notnull) {
     if (notnull === null) {
         console.log("Calling checkTOTPKey directly is deprecated. Use checkAuthKey(key)!");
     }
-    return tokens.indexOf(totptoken) !== null;
+    return tokens.indexOf(totptoken) != -1;
 }
 
 function getServerProps(force) {
