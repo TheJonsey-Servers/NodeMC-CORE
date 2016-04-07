@@ -1,4 +1,8 @@
-var key = getApiKey();
+var key;
+
+getAuthKey(function(authkey) {
+    key = authkey;
+});
 
 function files() {
     $(function() {
@@ -30,7 +34,7 @@ function rm(name) {
         url: "/deletefile",
         data: {
             file: name,
-            apikey: key
+            key: key
         },
         success: function(res) {
             console.log(res)

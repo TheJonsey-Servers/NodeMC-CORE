@@ -1,4 +1,8 @@
-var key = getApiKey();
+var key;
+
+getAuthKey(function(authkey) {
+    key = authkey;
+});
 
 function getlogs() {
     $(function() {
@@ -27,8 +31,8 @@ $(document).ready(function() {
         var command = $("#command").val();
         console.log(command);
         $.post($(this).attr('action'), {
-            Body: command,
-            apikey: key
+            command: command,
+            key: key
         }, function(response) {}, 'json');
         $('#command').val('');
         return false;

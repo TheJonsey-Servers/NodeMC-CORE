@@ -26,6 +26,10 @@
         <h3 class="tip">This is randomly generated and used to authenticate you. Save it safely!</h3>
         <input type="text" class="form-control" id="key" placeholder="XXX-XXX-XXX-XXXX" readonly>
         <br />
+        <h1 class="head">Your TOTP Token</h1>
+        <h3 class="tip">This is randomly generated and used to authenticate you. Enter it into a TOTP app like Google Authenticator.</h3>
+        <input type="text" class="form-control" id="totp" placeholder="XXX-XXX-XXX-XXXX" readonly>
+        <br />
         <a class="btn btn-primary btn-large pull-right" href="/step/2.html">Next ></a>
     </div>
     <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
@@ -35,6 +39,7 @@
     <script src="js.js"></script>
     <script>
         getApiKey();
+        getTOTPSecret();
     </script>
 </body>
 

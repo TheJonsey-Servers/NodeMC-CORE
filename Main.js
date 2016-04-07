@@ -34,6 +34,7 @@ var morgan = require('morgan');
 var FileStreamRotator = require('file-stream-rotator');
 var cors = require('cors');
 var serverjar = require('./nmc_modules/serverjar.js');
+var speakeasy = require("speakeasy");
 // ---
 
 // Set variables for the server(s)
@@ -42,6 +43,7 @@ var dir = ".";
 var files = "";
 var usingfallback = false;
 var completelog = "";
+var tokens = [];
 var srvprp;
 try { // If no error, server has been run before
     var serverOptions = JSON.parse(fs.readFileSync('server_files/properties.json', 'utf8'));
@@ -68,14 +70,28 @@ try {
 
         fs.writeFile("server_files/properties.json", newOptions, function(err) {
             if (err) {
-                return console.log("Something went wrong!");
+                return console.log("Couldn't save the API key.");
             } else {
-                console.log("New API key saved");
+                console.log("New API key saved!");
             }
         });
-
     } else {
         var apikey = serverOptions['apikey'];
+    }
+    var totpsecret = serverOptions.totpsecret;
+    if (totpsecret === "" || totpsecret === null) {
+        console.log("Generating a new TOTP secret...");
+        totpsecret = serverOptions.totpsecret = speakeasy.generateSecret().base32;
+        var newOptions = JSON.stringify(serverOptions, null, 2);
+
+        fs.writeFile("server_files/properties.json", newOptions, function(err) {
+            if (err) {
+                return console.log("Couldn't save the TOTP secret.");
+            } else {
+                console.log("New TOTP secret saved!");
+            }
+        });
+        
     }
     var name = serverOptions['name'];
     //directory = "/home/gabriel/"+name;
@@ -140,6 +156,33 @@ app.use(morgan('common', {
 
 // App functions for various things
 
+function checkAuthKey(key) {
+    return checkAPIKey(key, "ThisIsNotNull") || checkTOTPToken(key, "ThisIsAlsoNotNull");
+}
+
+function checkAPIKey(key, notnull) {
+    if (notnull === null) {
+        console.log("Calling checkAPIKey directly is deprecated. Use checkAuthKey(key)!");
+    }
+    if (key == apikey) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+function checkTOTPPasscode(passcode) {
+    console.log("Verifying " + passcode + " against " + speakeasy.totp({secret: totpsecret, encoding: "base32"}));
+    return speakeasy.totp.verify({secret: totpsecret, encoding: 'base32', token: passcode});
+}
+
+function checkTOTPToken(totptoken, notnull) {
+    if (notnull === null) {
+        console.log("Calling checkTOTPKey directly is deprecated. Use checkAuthKey(key)!");
+    }
+    return tokens.indexOf(totptoken) != -1;
+}
+
 function getServerProps(force) {
     if (!force || (typeof srvprp !== "undefined" && srvprp !== null)) {
         return srvprp;
@@ -151,14 +194,6 @@ function getServerProps(force) {
             srvprp = null;
         }
         return srvprp;
-    }
-}
-
-function checkAPIKey(key) {
-    if (key == apikey) {
-        return true;
-    } else {
-        return false;
     }
 }
 
@@ -259,10 +294,11 @@ if (serverOptions != null && !serverOptions.firstrun) {
     //checkVersion();
     console.log("Starting server...");
     startServer();
-    setport();
-    restartserver();
+    //setport();
+    //restartserver();
     console.log("Server running at localhost:" + PORT);
     console.log("API Key: " + apikey);
+    console.log("TOTP Secret: " + totpsecret);
     if (usingfallback == true) {
         console.log("Using fallback options! Check your properties.json.")
     }
@@ -272,24 +308,27 @@ if (serverOptions != null && !serverOptions.firstrun) {
 // Socket.IO handlers
 
 io.on('connection', function (socket) {
-	socket["nmc_isauthed"] = false;
+	socket.nmc_isauthed = false;
 	
 	socket.on("auth", function (data) {
-		if (data["action"] == "deauth") {
-			socket["nmc_isauthed"] = false;
+		if (data.action == "deauth") { // Deauthenticate
+			socket.nmc_isauthed = false;
 			socket.emit("authstatus", "deauth success");
 			socket.leave("authed");
-		} else if (data["action"] == "auth") {
-			socket["nmc_isauthed"] = data["apikey"] == apikey;
-			if (socket["nmc_isauthed"] == true) {
+            console.log("Deauthenticated a client.");
+		} else if (data.action == "auth") { // Authenticate using an API key or an already-generated token
+			socket.nmc_isauthed = checkAuthKey(data.key);
+			if (socket.nmc_isauthed === true) {
 				socket.emit("authstatus", "auth success");
 				socket.join("authed");
+                console.log("Authenticated a client with auth key " + data.key + " successfully.");
 			} else {
 				socket.emit("authstatus", "auth failed");
 				socket.leave("authed");
+                console.log("Client failed to authenticate with auth key " + data.key + ".");
 			}
-		} else if (data["action"] == "authstatus") {
-			if (socket["nmc_isauthed"] == true) {
+		} else if (data.action == "authstatus") { // Check authentication status
+			if (socket.nmc_isauthed === true) {
 				socket.emit("authstatus", "authed");
 			} else {
 				socket.emit("authstatus", "not authed");
@@ -306,7 +345,7 @@ io.on('connection', function (socket) {
 	});
 	
 	socket.on("fulllog", function () {
-		if (socket["nmc_isauthed"] == true) {
+		if (socket.nmc_isauthed == true) {
 			socket.emit("fulllog", completelog);
 		}
 	});
@@ -347,12 +386,14 @@ app.get('/download/:file', function(request, response) {
     }
 });
 
+// FIRST RUN SETUP URLS
 
 // First run setup POST
 app.post('/fr_setup', function(request, response) {
     if (serverOptions.firstrun) {
         var details = {
             'apikey': apikey,
+            'totpsecret': totpsecret,
             'port': parseInt(request.body.nmc_port),
             'minecraft_port': parseInt(request.body.mc_port),
             'ram': parseInt(request.body.memory) + "M",
@@ -360,7 +401,7 @@ app.post('/fr_setup', function(request, response) {
             'jar': request.body.flavour,
             'version': request.body.version,
             'firstrun': false
-        }
+        };
 
         response.send(JSON.stringify({
             sucess: true
@@ -395,7 +436,7 @@ app.post('/fr_setup', function(request, response) {
     }
 });
 
-app.get('/fr_apikey', function(request, response) {
+app.get('/fr_apikey', function(request, response) { // Get API key during setup
     if (serverOptions.firstrun) {
         response.send(serverOptions.apikey);
     } else { // Very strict I know :|
@@ -403,18 +444,56 @@ app.get('/fr_apikey', function(request, response) {
     }
 });
 
+app.get('/fr_totpsecret', function(request, response) { // Get TOTP secret during setup
+    if (serverOptions.firstrun) {
+        response.send(serverOptions.totpsecret);
+    } else { // Very strict I know :|
+        response.send("Access Denied");
+    }
+});
+
+// AUTHENTICATION KEY VALIDATION URLS
+
 app.post('/verifykey', function(request, response) {
-    var verify = request.param('apikey');
-    if (checkAPIKey(verify) == true) {
+    var verify = request.body.key;
+    console.log("Somebody tried to authenticate with " + verify);
+    if (checkAPIKey(verify, "notnull") == true) {
+        response.send('true');
+        console.log("Verified with API key.");
+    } else if (checkTOTPPasscode(verify, "notnull") === true) {
+        var cookietoken = crypto.randomBytes(32).toString('hex');
+        tokens.push(cookietoken);
+        response.send(cookietoken);
+        console.log("Verified with TOTP code: " + verify + "; generated token was " + cookietoken);
+    } else {
+        response.send('false');
+    }
+});
+
+app.post('/verifyapikey', function(request, response) {
+    if (checkAPIKey(request.body.apikey, "notnull") || checkAPIKey(request.body.key, "notnull")) {
         response.send('true');
     } else {
         response.send('false');
     }
 });
 
+app.post('/verifypasscode', function(request, response) {
+    var verify = request.body.key;
+    if (checkTOTPPasscode(verify, "notnull") === true) {
+        var cookietoken = crypto.randomBytes(32).toString('hex');
+        response.send(cookietoken);
+        tokens.push(cookietoken);
+    } else {
+        response.send('false');
+    }
+});
+
+// MINECRAFT SERVER CONTROL URLS
+
 app.post('/command', function(request, response) { // Send command to server
-    if (checkAPIKey(request.param('apikey')) == true) {
-        var command = request.param('Body');
+    if (checkAuthKey(request.body.key) === true) {
+        var command = request.body.command;
         if (command == "stop") {
             serverStopped = true;
         }
@@ -435,7 +514,7 @@ app.post('/command', function(request, response) { // Send command to server
     }
 });
 
-app.get('/serverup', function(reqiest, response) {
+app.get('/serverup', function(reqiest, response) { // Check whether server is online or not
     if (serverStopped == true) {
         response.send("no");
     } else {
@@ -443,11 +522,13 @@ app.get('/serverup', function(reqiest, response) {
     }
 });
 
-app.get('/log', function(request, response) { // Get server log
+app.get('/log', function(request, response) { // Get full server log
     response.send(completelog);
 });
 
-app.get('/files', function(request, response) { // Get server file
+// FILE MANAGEMENT URLS
+
+app.get('/files', function(request, response) { // Get files on server
     fs.readdir(dir + '/', function(err, items) {
         files = items;
         response.send(JSON.stringify({
@@ -457,8 +538,8 @@ app.get('/files', function(request, response) { // Get server file
 });
 
 app.post('/files', function(request, response) { // Return contents of a file
-    if (checkAPIKey(request.param('apikey')) == true) {
-        var file = request.body.Body;
+    if (checkAuthKey(request.body.key) || checkAuthKey(request.body.apikey)) {
+        var file = request.body.file;
         if (!fs.lstatSync(file).isDirectory()) {
             fs.readFile("./" + file, {
                 encoding: 'utf-8'
@@ -467,6 +548,7 @@ app.post('/files', function(request, response) { // Return contents of a file
                     response.send(data);
                 } else {
                     console.log(err);
+                    response.send(null);
                 }
 
             });
@@ -485,9 +567,9 @@ app.post('/files', function(request, response) { // Return contents of a file
 });
 
 app.post('/savefile', function(request, response) { // Save a POST'd file
-    if (checkAPIKey(request.param('apikey')) == true) {
-        var file = request.param('File');
-        var newcontents = request.param('Contents');
+    if (checkAuthKey(request.body.key) || checkAuthKey(request.body.apikey)) {
+        var file = request.body.filename;
+        var newcontents = request.body.contents;
 
         fs.writeFile(dir + "/" + file, newcontents, function(err) {
             if (err) {
@@ -501,6 +583,8 @@ app.post('/savefile', function(request, response) { // Save a POST'd file
         response.send("Invalid API key");
     }
 });
+
+// MISC URLS
 
 app.get('/info', function(request, response) { // Return server info as JSON object
     var props = getServerProps();
@@ -521,7 +605,7 @@ app.get('/info', function(request, response) { // Return server info as JSON obj
 });
 
 app.post('/restartserver', function(request, response) { // Restart server
-    if (checkAPIKey(request.param('apikey')) == true) {
+    if (checkAuthKey(request.body.key) == true) {
         restartserver();
     } else {
         response.send("Invalid API key");
@@ -529,7 +613,7 @@ app.post('/restartserver', function(request, response) { // Restart server
 });
 
 app.post('/startserver', function(request, response) { // Start server
-    if (checkAPIKey(request.param('apikey')) == true) {
+    if (checkAuthKey(request.body.key) == true) {
         if (serverStopped == true) {
             setport();
             startServer();
@@ -540,7 +624,7 @@ app.post('/startserver', function(request, response) { // Start server
 });
 
 app.post('/stopserver', function(request, response) { // Stop server
-    if (checkAPIKey(request.param('apikey')) == true) {
+    if (checkAuthKey(request.body.key) == true) {
         if (serverStopped == false) {
             serverSpawnProcess.stdin.write('stop\n');
             serverStopped = true;
@@ -554,7 +638,7 @@ app.post('/stopserver', function(request, response) { // Stop server
 });
 
 app.delete('/deletefile', function(request, response) {
-    if (checkAPIKey(request.body.apikey) == true) {
+    if (checkAuthKey(request.body.apikey) || checkAuthKey(request.body.key)) {
         var item = request.body.file;
         console.log(item);
         fs.unlink(item, function(err) {

@@ -18,7 +18,8 @@
     "node-fs": "^0.1.7",
     "properties-reader": "0.0.13",
     "request": "^2.69.0",
-    "socket.io": "^1.4.5"
+    "socket.io": "^1.4.5",
+    "speakeasy": "^2.0.0"
   },
   "devDependencies": {
     "nexe": "^1.1.0"

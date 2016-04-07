@@ -21,8 +21,21 @@ function checkAPIKey() {
     }
 }
 
-function getApiKey(){
+function getApiKey() { // TO BE REMOVED
+    console.warn("getApiKey is deprecated! Use getAuthKey(callback)!");
     return getCookie("apikey");
+}
+
+function getAuthKey(callback) {
+    var apiCookie = getCookie("apikey");
+    if (apiCookie !== "") {
+        callback(apiCookie);
+    } else {
+        checkAPIKey();
+        setTimeout(function() {
+            callback(getCookie("apikey"));
+        }, 500);
+    }
 }
 
 function getCookie(cname) {
