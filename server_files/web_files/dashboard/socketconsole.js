@@ -3,12 +3,17 @@ var authed = false;
 var textarea = document.getElementById("log");
 var key;
 
-getAuthKey(function(authkey) {
-    key = authkey;
-    socket.emit("auth", {action: "auth", key: key});
-});
+function auth() {
+    getAuthKey(function(authkey) {
+        key = authkey;
+        socket.emit("auth", {action: "auth", key: key});
+    });
+}
+
+auth();
 
 socket.on("authstatus", function (status) {
+    console.log(status);
     if (status == "auth success" || status == "authed") {
         authed = true;
         socket.emit("fulllog");
@@ -33,10 +38,15 @@ socket.on("appendlog", function (append) {
 
 function runCommand(command) {
     console.log(command);
-    $.post($(this).attr('action'), {
+    $.post("/command", {
         command: command,
         key: key
-    }, function(response) {}, 'json');
+    }, function(response) {
+        if (response == "Invalid API key") {
+            authed = false;
+            auth();
+        }
+    }, 'text');
 }
 
 $(document).ready(function() {
@@ -66,11 +76,7 @@ $("#start").click(function() {
 function gettext() {
         var ban = "tempban " + document.getElementsByName('usr')[0].value + " " + document.getElementsByName('rsn')[0].value;
         $("#ban").click(function() {
-         $.post('/command', {
-         Body: ban,
-         apikey: key
-         },
-         function(res){});
+            runCommand(ban);
         });
 }
 

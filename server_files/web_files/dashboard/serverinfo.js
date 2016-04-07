@@ -10,5 +10,4 @@ $.get("/info", function(data){
   if(prop[2]==true){ whitelist = "On" ;}
   else{ whitelist = "Off" ;}
   $("#whitelist").text("Whitelist: " + whitelist);
-
 });

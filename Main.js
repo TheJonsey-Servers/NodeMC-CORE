@@ -460,10 +460,10 @@ app.post('/verifykey', function(request, response) {
     if (checkAPIKey(verify, "notnull") == true) {
         response.send('true');
         console.log("Verified with API key.");
-    } else if (checkTOTPPasscode(parseInt(verify), "notnull") === true) {
+    } else if (checkTOTPPasscode(verify, "notnull") === true) {
         var cookietoken = crypto.randomBytes(32).toString('hex');
-        response.send(cookietoken);
         tokens.push(cookietoken);
+        response.send(cookietoken);
         console.log("Verified with TOTP code: " + verify + "; generated token was " + cookietoken);
     } else {
         response.send('false');
@@ -471,8 +471,7 @@ app.post('/verifykey', function(request, response) {
 });
 
 app.post('/verifyapikey', function(request, response) {
-    var verify = request.body.apikey;
-    if (checkAPIKey(verify, "notnull") === true) {
+    if (checkAPIKey(request.body.apikey, "notnull") || checkAPIKey(request.body.key, "notnull")) {
         response.send('true');
     } else {
         response.send('false');
@@ -527,6 +526,8 @@ app.get('/log', function(request, response) { // Get full server log
     response.send(completelog);
 });
 
+// FILE MANAGEMENT URLS
+
 app.get('/files', function(request, response) { // Get files on server
     fs.readdir(dir + '/', function(err, items) {
         files = items;
@@ -537,8 +538,8 @@ app.get('/files', function(request, response) { // Get files on server
 });
 
 app.post('/files', function(request, response) { // Return contents of a file
-    if (checkAuthKey(request.param('apikey')) == true) {
-        var file = request.body.Body;
+    if (checkAuthKey(request.body.key) || checkAuthKey(request.body.apikey)) {
+        var file = request.body.file;
         if (!fs.lstatSync(file).isDirectory()) {
             fs.readFile("./" + file, {
                 encoding: 'utf-8'
@@ -547,6 +548,7 @@ app.post('/files', function(request, response) { // Return contents of a file
                     response.send(data);
                 } else {
                     console.log(err);
+                    response.send(null);
                 }
 
             });
@@ -565,9 +567,9 @@ app.post('/files', function(request, response) { // Return contents of a file
 });
 
 app.post('/savefile', function(request, response) { // Save a POST'd file
-    if (checkAuthKey(request.param('apikey')) == true) {
-        var file = request.param('File');
-        var newcontents = request.param('Contents');
+    if (checkAuthKey(request.body.key) || checkAuthKey(request.body.apikey)) {
+        var file = request.body.filename;
+        var newcontents = request.body.contents;
 
         fs.writeFile(dir + "/" + file, newcontents, function(err) {
             if (err) {
@@ -581,6 +583,8 @@ app.post('/savefile', function(request, response) { // Save a POST'd file
         response.send("Invalid API key");
     }
 });
+
+// MISC URLS
 
 app.get('/info', function(request, response) { // Return server info as JSON object
     var props = getServerProps();
@@ -634,7 +638,7 @@ app.post('/stopserver', function(request, response) { // Stop server
 });
 
 app.delete('/deletefile', function(request, response) {
-    if (checkAuthKey(request.body.apikey) == true) {
+    if (checkAuthKey(request.body.apikey) || checkAuthKey(request.body.key)) {
         var item = request.body.file;
         console.log(item);
         fs.unlink(item, function(err) {

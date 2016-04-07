@@ -5,15 +5,15 @@ getAuthKey(function(authkey) {
 });
 
 $("#restart").click(function() {
-  $.post('/restartserver', {authkey: key}, function() {});
+  $.post('/restartserver', {key: key}, function() {});
 });
 $("#stop").click(function() {
-  $.post('/stopserver', {authkey: key}, function() {});
+  $.post('/stopserver', {key: key}, function() {});
   $("#start").show();
   $("#stop").hide();
 });
 $("#start").click(function() {
-  $.post('/startserver', {authkey: key}, function() {});
+  $.post('/startserver', {key: key}, function() {});
   $("#stop").show();
   $("#start").hide();
 });
@@ -21,8 +21,8 @@ function gettext() {
         var ban = "tempban " + document.getElementsByName('usr')[0].value + " " + document.getElementsByName('rsn')[0].value;
         $("#ban").click(function() {
          $.post('/command', {
-         Body: ban,
-         apikey: key
+         command: ban,
+         key: key
          },
          function(res){});
         });

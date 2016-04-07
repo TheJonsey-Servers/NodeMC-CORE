@@ -10,8 +10,8 @@ function file() {
     $(function() {
         $.post(
             "/files", {
-                'Body': filename,
-                'apikey': key
+                'file': filename,
+                'key': key
             },
             function(result) {
                 try {
@@ -66,9 +66,9 @@ $(function() {
     $("#savebtn").click(function() {
         $.post(
             "/savefile", {
-                'File': filename,
-                apikey: key,
-                'Contents': editor.getValue()
+                filename: filename,
+                key: key,
+                contents: editor.getValue()
             },
             function(result) {
 
@@ -87,7 +87,7 @@ function rm(name) { // Function for deleting files
         url: "/deletefile",
         data: {
             file: name,
-            apikey: key
+            key: key
         },
         success: function(res) {
             console.log(res)

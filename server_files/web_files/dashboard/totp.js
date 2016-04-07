@@ -1,6 +1,7 @@
 /*
  * Functions to get, set, and manipulte cookie
- * containing API key for requests.
+ * containing tokens and to generate tokens from
+ * TOTP passcodes
  */
 
 var tokenCookie;
@@ -11,6 +12,7 @@ function checkAPIToken(callback) {
         callback(tokenCookie);
     } else {
         passcode = prompt("Please enter your passcode.");
+        console.log("Verifying passcode " + passcode + "...");
         $.post("/verifykey", {key: passcode}, function(data) {
             console.log(data); // TESTINGNITSET
             if (data !== false) {
@@ -20,7 +22,7 @@ function checkAPIToken(callback) {
                 alert("Incorrect passcode.");
                 callback(null);
             }
-        }, "json");
+        }, "text");
     }
 }
 
