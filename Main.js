@@ -62,7 +62,7 @@ try { // If no error, server has been run before
     process.exit(1);
 }
 try {
-    if (serverOptions['apikey'] == "") {
+    if (serverOptions.apikey === "") {
         console.log("Generating new API key");
         var token = crypto.randomBytes(16).toString('hex');
         var apikey = serverOptions.apikey = token;
@@ -76,7 +76,7 @@ try {
             }
         });
     } else {
-        var apikey = serverOptions['apikey'];
+        var apikey = serverOptions.apikey;
     }
     var totpsecret = serverOptions.totpsecret;
     if (totpsecret === "" || totpsecret === null) {
@@ -93,14 +93,14 @@ try {
         });
         
     }
-    var name = serverOptions['name'];
+    var name = serverOptions.name;
     //directory = "/home/gabriel/"+name;
     //console.log(dir + " | " + directory);
-    var ram = serverOptions['ram'];
-    var PORT = serverOptions['port'];
-    var mcport = serverOptions['minecraft_port'];
-    var jardir = serverOptions['jarfile_directory'];
-    var jarfile = jardir + serverOptions['jar'] + '.' + serverOptions['version'] + '.jar';
+    var ram = serverOptions.ram;
+    var PORT = serverOptions.port;
+    var mcport = serverOptions.minecraft_port;
+    var jardir = serverOptions.jarfile_directory;
+    var jarfile = jardir + serverOptions.jar + '.' + serverOptions.version + '.jar';
     usingfallback = false;
 } catch (e) { // Fallback options
     console.log(e);
@@ -126,7 +126,7 @@ app.use(require('body-parser').urlencoded({
 
 server = app.listen(PORT); // Listen on port defined in properties.json
 
-var io = require('socket.io')(server)
+var io = require('socket.io')(server);
 
 // ---
 
@@ -134,10 +134,10 @@ var io = require('socket.io')(server)
  * Access logging
  */
 
-var logDirectory = dir + '/nmc_logs'
+var logDirectory = dir + '/nmc_logs';
 
 // ensure log directory exists
-fs.existsSync(logDirectory) || fs.mkdirSync(logDirectory)
+fs.existsSync(logDirectory) || fs.mkdirSync(logDirectory);
 
 // create a rotating write stream
 var accessLogStream = FileStreamRotator.getStream({
@@ -145,11 +145,11 @@ var accessLogStream = FileStreamRotator.getStream({
     frequency: 'daily',
     verbose: false,
     date_format: "YYYY-MM-DD"
-})
+});
 
 app.use(morgan('common', {
     skip: function(req, res) {
-        return req.path == "/log" || req.path == "/serverup"
+        return req.path == "/log" || req.path == "/serverup";
     },
     stream: accessLogStream
 }));
@@ -203,7 +203,7 @@ function checkVersion() { // Check for updates
             var version = body;
             if (version != current) {
                 var behind = version - current;
-                console.log("NodeMC is " + behind + " versions behind. Run the setup script again.")
+                console.log("NodeMC is " + behind + " versions behind. Run the setup script again.");
             }
         }
     });
@@ -289,7 +289,7 @@ function log(data) { // Log (dump) server output to variable
 }
 // ---
 
-if (serverOptions != null && !serverOptions.firstrun) {
+if (serverOptions !== null && !serverOptions.firstrun) {
     // Start then restart server for things to take effect
     //checkVersion();
     console.log("Starting server...");
@@ -299,8 +299,8 @@ if (serverOptions != null && !serverOptions.firstrun) {
     console.log("Server running at localhost:" + PORT);
     console.log("API Key: " + apikey);
     console.log("TOTP Secret: " + totpsecret);
-    if (usingfallback == true) {
-        console.log("Using fallback options! Check your properties.json.")
+    if (usingfallback === true) {
+        console.log("Using fallback options! Check your properties.json.");
     }
     // ---
 } else {}
@@ -337,7 +337,7 @@ io.on('connection', function (socket) {
 	});
 	
 	socket.on('status', function () {
-		if (serverStopped == true) {
+		if (serverStopped === true) {
 			socket.emit("status", "offline");
 		} else {
 			socket.emit("status", "online");
@@ -345,7 +345,7 @@ io.on('connection', function (socket) {
 	});
 	
 	socket.on("fulllog", function () {
-		if (socket.nmc_isauthed == true) {
+		if (socket.nmc_isauthed === true) {
 			socket.emit("fulllog", completelog);
 		}
 	});
@@ -410,7 +410,7 @@ app.post('/fr_setup', function(request, response) {
         if (details.version == "latest") {
             details.version = "1.9"; // Must keep this value manually updated /sigh
         }
-        fs.existsSync(details.jarfile_directory) || fs.mkdirSync(details.jarfile_directory,0o777,true)
+        fs.existsSync(details.jarfile_directory) || fs.mkdirSync(details.jarfile_directory,0o777,true);
 
         //Download server jarfile
         serverjar.getjar(details.jar, details.version, details.jarfile_directory, function(msg) {
@@ -457,7 +457,7 @@ app.get('/fr_totpsecret', function(request, response) { // Get TOTP secret durin
 app.post('/verifykey', function(request, response) {
     var verify = request.body.key;
     console.log("Somebody tried to authenticate with " + verify);
-    if (checkAPIKey(verify, "notnull") == true) {
+    if (checkAPIKey(verify, "notnull") === true) {
         response.send('true');
         console.log("Verified with API key.");
     } else if (checkTOTPPasscode(verify, "notnull") === true) {
@@ -515,7 +515,7 @@ app.post('/command', function(request, response) { // Send command to server
 });
 
 app.get('/serverup', function(reqiest, response) { // Check whether server is online or not
-    if (serverStopped == true) {
+    if (serverStopped === true) {
         response.send("no");
     } else {
         response.send("yes");
@@ -532,7 +532,7 @@ app.get('/files', function(request, response) { // Get files on server
     fs.readdir(dir + '/', function(err, items) {
         files = items;
         response.send(JSON.stringify({
-            files
+            files: files
         }));
     });
 });
@@ -557,7 +557,7 @@ app.post('/files', function(request, response) { // Return contents of a file
                 files = items;
                 response.send(JSON.stringify({
                     "isdirectory": "true",
-                    files
+                    files: files
                 }));
             });
         }
@@ -598,14 +598,14 @@ app.get('/info', function(request, response) { // Return server info as JSON obj
 		serverInfo.push("Failed to get port.");
 		serverInfo.push(false);
 	}
-    serverInfo.push(serverOptions['jar'] + ' ' + serverOptions['version']); // server jar version
+    serverInfo.push(serverOptions.jar + ' ' + serverOptions.version); // server jar version
     serverInfo.push(outsideip); // outside ip
-    serverInfo.push(serverOptions['id']); // 
+    serverInfo.push(serverOptions.id); // 
     response.send(JSON.stringify(serverInfo));
 });
 
 app.post('/restartserver', function(request, response) { // Restart server
-    if (checkAuthKey(request.body.key) == true) {
+    if (checkAuthKey(request.body.key) === true) {
         restartserver();
     } else {
         response.send("Invalid API key");
@@ -613,8 +613,8 @@ app.post('/restartserver', function(request, response) { // Restart server
 });
 
 app.post('/startserver', function(request, response) { // Start server
-    if (checkAuthKey(request.body.key) == true) {
-        if (serverStopped == true) {
+    if (checkAuthKey(request.body.key) === true) {
+        if (serverStopped === true) {
             setport();
             startServer();
         } else {}
@@ -624,8 +624,8 @@ app.post('/startserver', function(request, response) { // Start server
 });
 
 app.post('/stopserver', function(request, response) { // Stop server
-    if (checkAuthKey(request.body.key) == true) {
-        if (serverStopped == false) {
+    if (checkAuthKey(request.body.key) === true) {
+        if (serverStopped === false) {
             serverSpawnProcess.stdin.write('stop\n');
             serverStopped = true;
             response.send(serverStopped);
@@ -656,7 +656,7 @@ process.on('exit', function(code) { // When it exits kill the server process too
 });
 if (typeof serverSpawnProcess != "undefined") {
     serverSpawnProcess.on('exit', function(code) {
-        serverStopped == true; // Server process has crashed or stopped
+        serverStopped = true; // Server process has crashed or stopped
     });
 }
 process.stdout.on('error', function(err) {
