@@ -178,7 +178,7 @@ function checkTOTPPasscode(passcode) {
 
 function checkTOTPToken(totptoken, notnull) {
     if (notnull === null) {
-        console.log("Calling checkTOTPKey directly is deprecated. Use checkAuthKey(key)!");
+        console.log("Calling checkTOTPToken directly is deprecated. Use checkAuthKey(key)!");
     }
     return tokens.indexOf(totptoken) != -1;
 }
@@ -475,6 +475,14 @@ app.post('/verifyapikey', function(request, response) {
         response.send('true');
     } else {
         response.send('false');
+    }
+});
+
+app.post("/verifytoken", function(request, response) {
+    if (checkTOTPToken(request.body.token, "AgainThisIsNotNull")) {
+        response.send("true");
+    } else {
+        response.send("false");
     }
 });
 

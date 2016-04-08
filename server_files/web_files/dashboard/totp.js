@@ -6,24 +6,35 @@
 
 var tokenCookie;
 
-function checkAPIToken(callback) {
+function checkAPIToken(callback, force) {
     tokenCookie = getCookie("apitoken");
-    if (tokenCookie !== null && tokenCookie !== "") {
-        callback(tokenCookie);
-    } else {
-        passcode = prompt("Please enter your passcode.");
-        console.log("Verifying passcode " + passcode + "...");
-        $.post("/verifykey", {key: passcode}, function(data) {
+    if (tokenCookie !== null && tokenCookie !== "" || !force) {
+        $.post("/verifytoken", {token: tokenCookie}, function(data) {
             console.log(data); // TESTINGNITSET
-            if (data !== false) {
-                setCookie("apitoken", data, 365);
-                callback(data);
+            if (data === true) {
+                callback(tokenCookie);
             } else {
-                alert("Incorrect passcode.");
-                callback(null);
+                promptPasscode(callback);
             }
-        }, "text");
+        }, "json");
+    } else {
+        promptPasscode(callback);
     }
+}
+
+function promptPasscode(callback) {
+    passcode = prompt("Please enter your passcode.");
+    console.log("Verifying passcode " + passcode + "...");
+    $.post("/verifykey", {key: passcode}, function(data) {
+        console.log(data); // TESTINGNITSET
+        if (data != "false") {
+            setCookie("apitoken", data, 30);
+            callback(data);
+        } else {
+            alert("Incorrect passcode.");
+            callback(null);
+        }
+    }, "text");
 }
 
 function getApiKey() { // TO BE REMOVED
@@ -31,8 +42,8 @@ function getApiKey() { // TO BE REMOVED
     return null;
 }
 
-function getAuthKey(callback) {
-    checkAPIToken(callback);
+function getAuthKey(callback, force) {
+    checkAPIToken(callback, force);
 }
 
 function getCookie(cname) {
