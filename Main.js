@@ -137,7 +137,7 @@ app.use(morgan('common', {
 // App functions for various things
 
 function getServerProps(force) {
-    if (!force || (typeof srvprp !== "undefined" && srvprp !== null)) {
+    if (force !== true && (typeof srvprp !== "undefined" && srvprp !== null)) {
         return srvprp;
     } else {
         try {
@@ -450,20 +450,20 @@ app.post('/savefile', function(request, response) { // Save a POST'd file
 });
 
 app.get('/info', function(request, response) { // Return server info as JSON object
-    var props = getServerProps();
+    var props = getServerProps(true);
     var serverInfo = [];
-	if (props !== null) {
-		serverInfo.push(props.get('motd')); // message of the day
-		serverInfo.push(props.get('server-port')); // server port
-		serverInfo.push(props.get('white-list')); // if whitelist is on or off
+	if (props !== null && typeof props == "object") {
+		serverInfo.push(props.motd); // message of the day
+		serverInfo.push(props.server-port); // server port
+		serverInfo.push(props.white-list); // if whitelist is on or off
 	} else {
 		serverInfo.push("Failed to get MOTD.");
 		serverInfo.push("Failed to get port.");
 		serverInfo.push(false);
 	}
-    serverInfo.push(serverOptions['jar'] + ' ' + serverOptions['version']); // server jar version
+    serverInfo.push(serverOptions.jar + ' ' + serverOptions.version); // server jar version
     serverInfo.push(outsideip); // outside ip
-    serverInfo.push(serverOptions['id']); // 
+    serverInfo.push(serverOptions.id); // 
     response.send(JSON.stringify(serverInfo));
 });
 
