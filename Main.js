@@ -33,18 +33,25 @@ var querystring = require('querystring');
 var morgan = require('morgan');
 var FileStreamRotator = require('file-stream-rotator');
 var cors = require('cors');
+// --- 
+
+// Custom Node.js modules
 var serverjar = require('./nmc_modules/serverjar.js');
 var speakeasy = require("speakeasy");
+var plugins = require('./nmc_modules/plugins.js');
+plugins.loadPlugins();
 // ---
 
 // Set variables for the server(s)
-var current = 145;
+var current = 150;
 var dir = ".";
 var files = "";
 var usingfallback = false;
 var completelog = "";
 var tokens = [];
 var srvprp;
+var restartPending = false;
+
 try { // If no error, server has been run before
     var serverOptions = JSON.parse(fs.readFileSync('server_files/properties.json', 'utf8'));
 
@@ -183,6 +190,10 @@ function checkTOTPToken(totptoken, notnull) {
     return tokens.indexOf(totptoken) != -1;
 }
 
+// Debugging only
+// console.log(plugins.pluginList()); // List plugins
+// ---
+
 function getServerProps(force) {
     if (!force || (typeof srvprp !== "undefined" && srvprp !== null)) {
         return srvprp;
@@ -198,64 +209,72 @@ function getServerProps(force) {
 }
 
 function checkVersion() { // Check for updates
-    getfile.get('https://nodemc.space/version', function(error, response, body) {
+    getfile.get('https://raw.githubusercontent.com/NodeMC/NodeMC-CORE/master/version.txt', function(error, response, body) {
         if (!error && response.statusCode == 200) {
             var version = body;
             if (version != current) {
                 var behind = version - current;
-                console.log("NodeMC is " + behind + " versions behind. Run the setup script again.");
+                console.log("NodeMC is " + behind + " versions behind. Run a git pull to update!")
             }
         }
     });
 }
 
 function restartserver() { // Restarting the server
-    serverSpawnProcess.stdin.write('say [NodeMC] Restarting server!\n');
+    if (!serverStopped) {
+        serverSpawnProcess.stdin.write('say [NodeMC] Restarting server!\n');
 
-    serverSpawnProcess.stdin.write('stop\n');
+        serverSpawnProcess.stdin.write('stop\n');
 
-    serverSpawnProcess.on("close", function() {
-        serverStopped = true;
+        serverSpawnProcess.on("close", function() {
+            serverStopped = true;
+            setport();
+
+            startServer();
+        });
+    } else {
         setport();
-
         startServer();
-    });
+    }
 }
 
 function setport() { // Enforcing server properties set by host
     //console.log(oldport);
     //console.log(mcport);
     try {
-		var props = getServerProps(); // Get the original properties
-		if (props !== null) {
-            var oldport = props.get('server-port');
-			// Here we set any minecraft server properties we need
-			fs.readFile('server.properties', 'utf8', function(err, data) {
-				if (err) {
-					return console.log(err);
-				}
-				var result = data.replace('server-port=' + oldport, 'server-port=' + mcport);
+        var props = getServerProps(); // Get the original properties
+        if (props !== null) {
+            var props = getServerProps(); // Get the original properties
+            if ((typeof props !== "undefined") && (props !== null)) {
+                var oldport = props.get('server-port');
+                // Here we set any minecraft server properties we need
+                fs.readFile('server.properties', 'utf8', function(err, data) {
+                    if (err) {
+                        return console.log(err);
+                    }
+                    var result = data.replace('server-port=' + oldport, 'server-port=' + mcport);
 
-				fs.writeFile('server.properties', result, 'utf8', function(err) {
-					if (err) return console.log(err);
-				});
-			});
-			props = pr('server.properties'); // Get the new properties
-            //console.log(oldport);
-        } else {
-            console.log("Failed to get the server properties!");
-        }
-
-        fs.readFile('eula.txt', 'utf8', function(err, data) {
-            if (err) {
-                return console.log(err);
+                    fs.writeFile('server.properties', result, 'utf8', function(err) {
+                        if (err) return console.log(err);
+                    });
+                });
+                props = pr('server.properties'); // Get the new properties
+                //console.log(oldport);
+            } else {
+                console.log("Failed to get the server properties!");
             }
-            var result = data.replace('eula=false', 'eula=true');
 
-            fs.writeFile('eula.txt', result, 'utf8', function(err) {
-                if (err) return console.log(err);
+            fs.readFile('eula.txt', 'utf8', function(err, data) {
+                if (err) {
+                    return console.log(err);
+                }
+                var result = data.replace('eula=false', 'eula=true');
+
+                fs.writeFile('eula.txt', result, 'utf8', function(err) {
+                    if (err) return console.log(err);
+                });
             });
-        });
+        }
     } catch (e) {
         console.log(e);
     }
@@ -279,6 +298,12 @@ function startServer() { // Start server process
     ]);
     serverSpawnProcess.stdout.on('data', log);
     serverSpawnProcess.stderr.on('data', log);
+    serverSpawnProcess.on('exit', function(code) {
+        serverStopped == true; // Server process has crashed or stopped
+        if (restartPending) {
+            startServer();
+        }
+    });
 }
 
 function log(data) { // Log (dump) server output to variable
@@ -357,6 +382,41 @@ function iolog(data) {
 	
 
 // App post/get request handlers (API)
+//------------------------------------
+
+app.get('/plugin/:ref/:route', function(request, response) {
+    var ref = request.params.ref;
+    var route = request.params.route;
+    try {
+        var pluginResponse = plugins.handleRoute(ref, route, undefined, "get");
+        if (pluginResponse !== null) {
+            response.send(pluginResponse);
+        } else {
+            response.send("Unknown route.");
+        }
+    } catch (e) {
+        console.log(e);
+        response.send("Unknown route.");
+    }
+});
+
+app.post('/plugin/:ref/:route', function(request, response) {
+    var ref = request.params.ref;
+    var route = request.params.route;
+    var args = request.body.args;
+    // console.log(request.body.args);
+    try {
+        var pluginResponse = plugins.handleRoute(ref, route, args, "post");
+        if (pluginResponse !== null) {
+            response.send(pluginResponse);
+        } else {
+            response.send("Unknown route.");
+        }
+    } catch (e) {
+        console.log(e);
+        response.send("Unknown route.");
+    }
+});
 
 app.get('/download/:file', function(request, response) {
     var options = {
@@ -368,21 +428,25 @@ app.get('/download/:file', function(request, response) {
         }
     };
     var file = querystring.unescape(request.params.file);
-    if (!fs.lstatSync(file).isDirectory()) {
-        fs.readFile("./" + file, {
-            encoding: 'utf-8'
-        }, function(err, data) {
-            if (!err) {
-                response.download(file);
-            } else {
-                response.send("file not found");
-            }
+    if (file !== "server_files/properties.json") {
+        if (!fs.lstatSync(file).isDirectory()) {
+            fs.readFile("./" + file, {
+                encoding: 'utf-8'
+            }, function(err, data) {
+                if (!err) {
+                    response.download(file);
+                } else {
+                    response.send("file not found");
+                }
 
-        });
+            });
+        } else {
+            fs.readdir(dir + '/' + file, function(err, items) {
+
+            });
+        }
     } else {
-        fs.readdir(dir + '/' + file, function(err, items) {
-
-        });
+        response.send("Restricted file");
     }
 });
 
@@ -410,7 +474,8 @@ app.post('/fr_setup', function(request, response) {
         if (details.version == "latest") {
             details.version = "1.9"; // Must keep this value manually updated /sigh
         }
-        fs.existsSync(details.jarfile_directory) || fs.mkdirSync(details.jarfile_directory,0o777,true);
+        
+        fs.existsSync(details.jarfile_directory) || fs.mkdirSync(details.jarfile_directory, 0o777, true);
 
         //Download server jarfile
         serverjar.getjar(details.jar, details.version, details.jarfile_directory, function(msg) {
@@ -504,6 +569,9 @@ app.post('/command', function(request, response) { // Send command to server
         var command = request.body.command;
         if (command == "stop") {
             serverStopped = true;
+        } else if (command == "restart") {
+            serverStopped = true;
+            restartPending = true;
         }
         serverSpawnProcess.stdin.write(command + '\n');
 
@@ -606,8 +674,7 @@ app.get('/info', function(request, response) { // Return server info as JSON obj
 		serverInfo.push("Failed to get port.");
 		serverInfo.push(false);
 	}
-    serverInfo.push(serverOptions.jar + ' ' + serverOptions.version); // server jar version
-    serverInfo.push(outsideip); // outside ip
+    serverInfo.push(serverOptions.jar + ' ' + serverOptions.version); // server jar versionoutside ip
     serverInfo.push(serverOptions.id); // 
     response.send(JSON.stringify(serverInfo));
 });
