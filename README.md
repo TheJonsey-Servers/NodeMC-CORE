@@ -1,3 +1,4 @@
+[![Stories in Ready](https://badge.waffle.io/TheJonsey-Servers/NodeMC-CORE.png?label=ready&title=Ready)](https://waffle.io/TheJonsey-Servers/NodeMC-CORE)
 # NodeMC-CORE - The_Jonsey Fork
 
 [![Build Status](http://nodemc.space:8080/job/NodeMC/badge/icon)](http://nodemc.space:8080/job/NodeMC/) [![Gitter](https://img.shields.io/gitter/room/nwjs/nw.js.svg?maxAge=2592000)](https://gitter.im/gmemstr/nodemc)
